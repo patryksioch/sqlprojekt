@@ -1,136 +1,177 @@
-sqlprojekt
-Diagram Encji i Związków (ERD) - System Obsługi Hotelu
-```mermaid
+# sqlprojekt
+
+## Diagram encji i związków (ER) – system obsługi hotelu
+
+Model koncepcyjny obejmuje 13 encji i 13 związków.
+
+mermaid
 erDiagram
     GOSC {
-        int id_goscia PK
-        varchar imie
-        varchar nazwisko
-        varchar email UK
-        varchar telefon
-        varchar adres
+        W email "ID"
+        W imie
+        W nazwisko
+        O telefon
+        O adres
     }
 
     TYP_POKOJU {
-        int id_typu PK
-        varchar nazwa
-        varchar standard
-        int maks_liczba_osob
-        decimal cena_za_dobe
+        W nazwa "część ID"
+        W standard "część ID"
+        W maks_liczba_osob
+        W cena_katalogowa_za_dobe
     }
 
     POKOJ {
-        int id_pokoju PK
-        int id_typu FK
-        varchar numer UK
-        int pietro
-        varchar status "stan techniczny pokoju"
+        W numer_pokoju "ID"
+        W pietro
+        W stan_techniczny
     }
 
     WYPOSAZENIE {
-        int id_wyposazenia PK
-        varchar nazwa
-        varchar opis
+        W nazwa "ID"
+        O opis
     }
 
     WYPOSAZENIE_POKOJU {
-        int id_pokoju PK, FK
-        int id_wyposazenia PK, FK
-        int ilosc
-        varchar stan
+        W liczba_sztuk
+        W stan_wyposazenia
     }
 
     PRACOWNIK {
-        int id_pracownika PK
-        varchar imie
-        varchar nazwisko
-        varchar stanowisko
-        varchar email UK
-        varchar telefon
+        W email "ID"
+        W imie
+        W nazwisko
+        W stanowisko
+        O telefon
     }
 
     ZGLOSZENIE_USTERKI {
-        int id_zgloszenia PK
-        int id_pokoju FK
-        int id_pracownika FK
-        timestamp data_zgloszenia
-        varchar typ_zgloszenia
-        text opis
-        varchar status
+        W id_zgloszenia "ID systemowy"
+        W data_zgloszenia
+        W typ_zgloszenia
+        W opis
+        W status_zgloszenia
     }
 
     REZERWACJA {
-        int id_rezerwacji PK
-        int id_goscia FK
-        int id_pokoju FK
-        int id_pracownika FK
-        date data_od
-        date data_do
-        int liczba_osob
-        decimal cena_za_dobe "stawka ustalona przy rezerwacji"
-        varchar status
+        W id_rezerwacji "ID systemowy"
+        W planowany_przyjazd
+        W planowany_wyjazd
+        W liczba_osob
+        W ustalona_cena_za_dobe
+        W status_rezerwacji
     }
 
     POBYT {
-        int id_pobytu PK
-        int id_rezerwacji FK, UK
-        timestamp data_zameldowania
-        timestamp data_wymeldowania "NULL do wymeldowania"
+        W data_zameldowania
+        O data_wymeldowania
     }
 
     USLUGA {
-        int id_uslugi PK
-        varchar nazwa
-        text opis
-        decimal cena_aktualna
+        W nazwa "ID"
+        O opis
+        W cena_katalogowa
     }
 
     ZAMOWIENIE_USLUGI {
-        int id_zamowienia PK
-        int id_pobytu FK
-        int id_uslugi FK
-        timestamp data_realizacji "NULL do realizacji"
-        int ilosc
-        decimal cena_jednostkowa
+        W id_zamowienia "ID systemowy"
+        W ilosc
+        W cena_jednostkowa
+        O data_realizacji
     }
 
     PLATNOSC {
-        int id_platnosci PK
-        int id_rezerwacji FK
-        decimal kwota
-        timestamp data_platnosci
-        varchar metoda_platnosci
+        W id_platnosci "ID systemowy"
+        W kwota
+        W data_platnosci
+        W metoda_platnosci
     }
 
     FAKTURA {
-        int id_faktury PK
-        int id_pobytu FK, UK
-        varchar numer_faktury UK
-        date data_wystawienia
-        decimal kwota_calkowita
+        W numer_faktury "ID"
+        W data_wystawienia
+        W kwota_calkowita
     }
 
-    GOSC ||..o{ REZERWACJA : "dokonuje"
-    TYP_POKOJU ||..o{ POKOJ : "klasyfikuje"
-    POKOJ ||..o{ REZERWACJA : "jest rezerwowany w"
-    POKOJ ||--o{ WYPOSAZENIE_POKOJU : "posiada"
-    WYPOSAZENIE ||--o{ WYPOSAZENIE_POKOJU : "wchodzi w skład"
-    POKOJ ||..o{ ZGLOSZENIE_USTERKI : "ma zgłoszenia"
-    PRACOWNIK ||..o{ ZGLOSZENIE_USTERKI : "obsługuje"
-    PRACOWNIK ||..o{ REZERWACJA : "rejestruje"
-    REZERWACJA ||..o| POBYT : "prowadzi do"
-    REZERWACJA ||..o{ PLATNOSC : "ma wpłaty"
-    POBYT ||..o{ ZAMOWIENIE_USLUGI : "obejmuje"
-    USLUGA ||..o{ ZAMOWIENIE_USLUGI : "jest zamawiana w"
-    POBYT ||..o| FAKTURA : "jest dokumentowany przez"
-```
-Założenia modelu
-Rezerwacja dotyczy jednego pokoju i jednego gościa rezerwującego. Może prowadzić do jednego pobytu, a pobyt może mieć jedną fakturę.
-Płatności są przypisane do rezerwacji, dzięki czemu można zapisać zaliczkę przed zameldowaniem. Zamówienia usług składa się podczas pobytu i przypisuje do tego pobytu.
-Każdą rezerwację rejestruje pracownik. Każde zgłoszenie usterki jest przypisane do pracownika.
-Jeden wiersz `WYPOSAZENIE_POKOJU` opisuje łączną liczbę sztuk danego rodzaju wyposażenia w pokoju. Para `(id_pokoju, id_wyposazenia)` tworzy jeden klucz główny.
-Reguły do wymuszenia w bazie SQL
-Każdy `FK` widoczny w diagramie jest obowiązkowy (`NOT NULL`). `POBYT.id_rezerwacji` i `FAKTURA.id_pobytu` wymagają także `UNIQUE`.
-`data_od < data_do`. Dwie aktywne rezerwacje jednego pokoju nie mogą się nakładać, również przy równoczesnym zapisie. Termin obejmuje dzień przyjazdu i kończy się przed dniem wyjazdu (`[data_od, data_do)`). Dostępność zależy od terminu oraz stanu technicznego pokoju.
-`liczba_osob` musi wynosić co najmniej 1 i mieścić się w limicie typu pokoju. Ilości wyposażenia i zamawianych usług muszą być dodatnie.
-Gdy podano `data_wymeldowania`, musi ona być późniejsza niż `data_zameldowania`. Stawkę za dobę i cenę jednostkową usługi zapisuje się odpowiednio w chwili rezerwacji i zamówienia.
+    GOSC ||..o{ REZERWACJA : "składa / jest składana przez"
+    TYP_POKOJU ||..o{ POKOJ : "klasyfikuje / należy do typu"
+    POKOJ ||..o{ REZERWACJA : "jest objęty rezerwacją / dotyczy pokoju"
+    POKOJ ||--o{ WYPOSAZENIE_POKOJU : "ma wyposażenie / dotyczy pokoju"
+    WYPOSAZENIE ||--o{ WYPOSAZENIE_POKOJU : "jest wykazywane w / dotyczy wyposażenia"
+    POKOJ ||..o{ ZGLOSZENIE_USTERKI : "ma zgłoszenia / dotyczy pokoju"
+    PRACOWNIK ||..o{ ZGLOSZENIE_USTERKI : "obsługuje / jest obsługiwane przez"
+    PRACOWNIK ||..o{ REZERWACJA : "rejestruje / jest rejestrowana przez"
+    REZERWACJA ||--o| POBYT : "prowadzi do / wynika z"
+    REZERWACJA ||..o{ PLATNOSC : "ma wpłaty / dotyczy rezerwacji"
+    POBYT ||..o{ ZAMOWIENIE_USLUGI : "obejmuje / jest składane w ramach"
+    USLUGA ||..o{ ZAMOWIENIE_USLUGI : "jest zamawiana w / dotyczy usługi"
+    POBYT ||..o| FAKTURA : "jest dokumentowany / dokumentuje"
+
+### Oznaczenia
+
+- W oznacza atrybut wymagany, a O atrybut opcjonalny. ID wskazuje identyfikator. Dwa atrybuty oznaczone jako część ID tworzą wspólnie jeden identyfikator.
+- Linia ciągła oznacza związek identyfikujący. Pobyt jest identyfikowany przez związek z rezerwacją, a wyposażenie pokoju przez parę związków z pokojem i wyposażeniem.
+- Przy każdym związku podano obie nazwy. Pierwszą czyta się od lewej encji w kodzie, drugą w odwrotnym kierunku. Rozwijany widok poniżej umieszcza każdą nazwę przy jej końcu związku.
+
+<details>
+<summary>Diagram z osobnymi etykietami przy obu końcach związków</summary>
+
+W tym widoku romb i dwa odcinki oznaczają jeden związek. Krotność przy encji określa, ile jej wystąpień może przypadać na jedno wystąpienie po drugiej stronie. Zielone linie oznaczają związki identyfikujące.
+
+mermaid
+---
+config:
+  flowchart:
+    nodeSpacing: 28
+    rankSpacing: 30
+    curve: linear
+---
+flowchart TB
+    accTitle: Diagram koncepcyjny ER systemu obsługi hotelu
+    accDescr: 13 encji i 13 związków. Każdy romb łączy dwa nazwane końce jednego związku.
+
+    TYP_POKOJU["<b>Typ pokoju</b><br/>Nazwa · W · ID<br/>Standard · W · ID<br/>Maks. liczba osób · W<br/>Cena katalogowa za dobę · W"]
+    POKOJ["<b>Pokój</b><br/>Numer pokoju · W · ID<br/>Piętro · W<br/>Stan techniczny · W"]
+    WYPOSAZENIE["<b>Wyposażenie</b><br/>Nazwa · W · ID<br/>Opis · O"]
+    WYPOSAZENIE_POKOJU["<b>Wyposażenie pokoju</b><br/>Liczba sztuk · W<br/>Stan wyposażenia · W<br/><b>ID przez oba związki</b>"]
+    GOSC["<b>Gość</b><br/>E-mail · W · ID<br/>Imię · W<br/>Nazwisko · W<br/>Telefon · O<br/>Adres · O"]
+    PRACOWNIK["<b>Pracownik</b><br/>E-mail · W · ID<br/>Imię · W<br/>Nazwisko · W<br/>Stanowisko · W<br/>Telefon · O"]
+    USTERKA["<b>Zgłoszenie usterki</b><br/>ID zgłoszenia · W · ID<br/>Data zgłoszenia · W<br/>Typ zgłoszenia · W<br/>Opis · W<br/>Status zgłoszenia · W"]
+    REZERWACJA["<b>Rezerwacja</b><br/>ID rezerwacji · W · ID<br/>Planowany przyjazd · W<br/>Planowany wyjazd · W<br/>Liczba osób · W<br/>Ustalona cena za dobę · W<br/>Status rezerwacji · W"]
+    PLATNOSC["<b>Płatność</b><br/>ID płatności · W · ID<br/>Kwota · W<br/>Data płatności · W<br/>Metoda płatności · W"]
+    POBYT["<b>Pobyt</b><br/>Data zameldowania · W<br/>Data wymeldowania · O<br/><b>ID przez związek z rezerwacją</b>"]
+    FAKTURA["<b>Faktura</b><br/>Numer faktury · W · ID<br/>Data wystawienia · W<br/>Kwota całkowita · W"]
+    ZAMOWIENIE["<b>Zamówienie usługi</b><br/>ID zamówienia · W · ID<br/>Ilość · W<br/>Cena jednostkowa · W<br/>Data realizacji · O"]
+    USLUGA["<b>Usługa</b><br/>Nazwa · W · ID<br/>Opis · O<br/>Cena katalogowa · W"]
+
+    TYP_POKOJU ---|"1 · klasyfikuje"| R_TYP{"·"} ---|"0..N · należy do typu"| POKOJ
+    POKOJ ---|"1 · ma wyposażenie"| R_POK_WYP{"·"} ---|"0..N · dotyczy pokoju"| WYPOSAZENIE_POKOJU
+    WYPOSAZENIE ---|"1 · jest wykazywane w"| R_WYP{"·"} ---|"0..N · dotyczy wyposażenia"| WYPOSAZENIE_POKOJU
+    POKOJ ---|"1 · jest objęty rezerwacją"| R_POK_REZ{"·"} ---|"0..N · dotyczy pokoju"| REZERWACJA
+    POKOJ ---|"1 · ma zgłoszenia"| R_POK_UST{"·"} ---|"0..N · dotyczy pokoju"| USTERKA
+    PRACOWNIK ---|"1 · obsługuje"| R_PRAC_UST{"·"} ---|"0..N · jest obsługiwane przez"| USTERKA
+    PRACOWNIK ---|"1 · rejestruje"| R_PRAC_REZ{"·"} ---|"0..N · jest rejestrowana przez"| REZERWACJA
+    GOSC ---|"1 · składa"| R_GOSC{"·"} ---|"0..N · jest składana przez"| REZERWACJA
+    REZERWACJA ---|"1 · ma wpłaty"| R_PLAT{"·"} ---|"0..N · dotyczy rezerwacji"| PLATNOSC
+    REZERWACJA ---|"1 · prowadzi do"| R_POBYT{"·"} ---|"0..1 · wynika z"| POBYT
+    POBYT ---|"1 · jest dokumentowany"| R_FAKTURA{"·"} ---|"0..1 · dokumentuje"| FAKTURA
+    POBYT ---|"1 · obejmuje"| R_ZAM{"·"} ---|"0..N · jest składane w ramach"| ZAMOWIENIE
+    USLUGA ---|"1 · jest zamawiana w"| R_USLUGA{"·"} ---|"0..N · dotyczy usługi"| ZAMOWIENIE
+
+    classDef encja fill:#f0f5fc,stroke:#597192,color:#142847
+    classDef zwiazek fill:#edf3fa,stroke:#597192,color:#597192
+    classDef identyfikujacy fill:#dff4ef,stroke:#0a645e,color:#0a645e
+    class TYP_POKOJU,POKOJ,WYPOSAZENIE,WYPOSAZENIE_POKOJU,GOSC,PRACOWNIK,USTERKA,REZERWACJA,PLATNOSC,POBYT,FAKTURA,ZAMOWIENIE,USLUGA encja
+    class R_TYP,R_POK_REZ,R_POK_UST,R_PRAC_UST,R_PRAC_REZ,R_GOSC,R_PLAT,R_FAKTURA,R_ZAM,R_USLUGA zwiazek
+    class R_POK_WYP,R_WYP,R_POBYT identyfikujacy
+    linkStyle 2,3,4,5,18,19 stroke:#0a645e,stroke-width:2px
+
+</details>
+
+### Założenia modelu
+
+- E-mail jest wymagany i unikatowy osobno wśród gości i pracowników. Nazwy usług i wyposażenia są unikatowe w swoich katalogach. Typ pokoju identyfikuje para nazwa + standard.
+- Rezerwacja dotyczy jednego pokoju i może prowadzić do najwyżej jednego pobytu. Pobyt może mieć najwyżej jedną fakturę.
+- Pracownik rejestruje każdą rezerwację. Zgłoszenie usterki ma przypisanego pracownika od chwili rejestracji.
+- Zaliczka może wpłynąć przed zameldowaniem. Usługi zamawia się podczas pobytu. Daty wymeldowania i realizacji usługi mogą początkowo być puste.
+- Aktywne rezerwacje tego samego pokoju nie mogą się nakładać. Kolejny gość może przyjechać w dniu wyjazdu poprzedniego. Stawka za dobę i cena jednostkowa usługi są zapisywane w chwili rezerwacji lub zamówienia.
