@@ -3,8 +3,8 @@
 ## Diagram encji i związków (ER) – system obsługi hotelu
 
 Model koncepcyjny obejmuje 13 encji i 13 związków.
+
 ```mermaid
-mermaid
 erDiagram
     GOSC {
         W email "ID"
